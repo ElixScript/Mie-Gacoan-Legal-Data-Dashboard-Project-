@@ -3,90 +3,69 @@ import re
 from pathlib import Path
 
 # =========================
-# 1. Path Setup
+# PATH (SUDAH SESUAI REQUEST)
 # =========================
-INPUT_PATH = Path("data/processed/cleaned_gacoan_legal_analytics_data.csv")  # ganti sesuai file kamu
+INPUT_PATH = Path("data/processed/cleaned_gacoan_legal_analytics_data.csv")
 OUTPUT_DIR = Path("data/processed")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 OUTPUT_PATH = OUTPUT_DIR / "data_cleaned_akhir.csv"
 
 # =========================
-# 2. Load Data
+# LOAD DATA
 # =========================
 df = pd.read_csv(INPUT_PATH)
 
 # =========================
-# 3. Regex Provinsi
+# LIST PROVINSI
 # =========================
-pattern = re.compile(r'''(?i)\b(
-aceh|
-sumatera utara|sumut|
-sumatera barat|sumbar|
-riau|
-kepulauan riau|kepri|
-jambi|
-sumatera selatan|sumsel|
-bengkulu|
-lampung|
-bangka belitung|
-banten|
-dki jakarta|jakarta|
-jawa barat|jabar|
-jawa tengah|jateng|
-di yogyakarta|yogyakarta|diy|
-jawa timur|jatim|
-bali|
-nusa tenggara barat|ntb|
-nusa tenggara timur|ntt|
-kalimantan barat|kalbar|
-kalimantan tengah|kalteng|
-kalimantan selatan|kalsel|
-kalimantan timur|kaltim|
-kalimantan utara|kaltara|
-sulawesi utara|sulut|
-sulawesi tengah|sulteng|
-sulawesi selatan|sulsel|
-sulawesi tenggara|sultra|
-gorontalo|
-sulawesi barat|sulbar|
-maluku|
-maluku utara|
-papua|
-papua barat|
-papua barat daya|
-papua selatan|
-papua tengah|
-papua pegunungan
-)\b''', re.VERBOSE)
+PROVINSI_LIST = [
+    "aceh","sumatera utara","sumatera barat","riau","kepulauan riau","jambi",
+    "sumatera selatan","bengkulu","lampung","bangka belitung","banten",
+    "dki jakarta","jakarta","jawa barat","jawa tengah","jawa timur",
+    "di yogyakarta","yogyakarta","bali","nusa tenggara barat","nusa tenggara timur",
+    "kalimantan barat","kalimantan tengah","kalimantan selatan","kalimantan timur","kalimantan utara",
+    "sulawesi utara","sulawesi tengah","sulawesi selatan","sulawesi tenggara","gorontalo","sulawesi barat",
+    "maluku","maluku utara","papua","papua barat","papua barat daya","papua selatan","papua tengah","papua pegunungan"
+]
 
 # =========================
-# 4. Extract Function
+# CLEAN TEXT
+# =========================
+def clean_text(text):
+    text = str(text).lower()
+    text = re.sub(r'[^a-z\s]', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+# =========================
+# EXTRACT PROVINSI DARI ALAMAT
 # =========================
 def extract_provinsi(alamat):
     if pd.isna(alamat):
         return None
-    
-    matches = pattern.findall(alamat)
-    return matches[-1].title() if matches else None  # ambil paling belakang
+
+    text = clean_text(alamat)
+
+    found = []
+    for prov in PROVINSI_LIST:
+        if prov in text:
+            found.append(prov)
+
+    if not found:
+        return None
+
+    # ambil yang paling belakang
+    found_sorted = sorted(found, key=lambda x: text.rfind(x))
+    return found_sorted[-1].title()
 
 # =========================
-# 5. Apply
+# APPLY (OVERWRITE TOTAL)
 # =========================
-df["Provinsi_Extracted"] = df["Alamat"].apply(extract_provinsi)
-
-# Replace jika hasil ekstraksi ada
-df["Provinsi_Final"] = df["Provinsi_Extracted"].combine_first(df["Provinsi"])
+df["Provinsi"] = df["Alamat"].apply(extract_provinsi)
 
 # =========================
-# 6. Debug (optional tapi penting)
-# =========================
-changed = df[df["Provinsi"] != df["Provinsi_Final"]]
-print(f"Jumlah data diperbaiki: {len(changed)}")
-
-# =========================
-# 7. Save Output
+# SAVE
 # =========================
 df.to_csv(OUTPUT_PATH, index=False)
 
-print(f"File berhasil disimpan di: {OUTPUT_PATH}")
+print("Done. File saved to:", OUTPUT_PATH)
