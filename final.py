@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 # =========================
-# PATH (SUDAH SESUAI REQUEST)
+# PATH
 # =========================
 INPUT_PATH = Path("data/processed/cleaned_gacoan_legal_analytics_data.csv")
 OUTPUT_DIR = Path("data/processed")
@@ -12,7 +12,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_PATH = OUTPUT_DIR / "data_cleaned_akhir.csv"
 
 # =========================
-# LOAD DATA
+# LOAD
 # =========================
 df = pd.read_csv(INPUT_PATH)
 
@@ -38,7 +38,7 @@ def clean_text(text):
     return re.sub(r'\s+', ' ', text).strip()
 
 # =========================
-# EXTRACT PROVINSI DARI ALAMAT
+# EXTRACT
 # =========================
 def extract_provinsi(alamat):
     if pd.isna(alamat):
@@ -59,9 +59,12 @@ def extract_provinsi(alamat):
     return found_sorted[-1].title()
 
 # =========================
-# APPLY (OVERWRITE TOTAL)
+# APPLY DENGAN FALLBACK
 # =========================
-df["Provinsi"] = df["Alamat"].apply(extract_provinsi)
+df["Provinsi_Extracted"] = df["Alamat"].apply(extract_provinsi)
+
+# 👉 fallback: kalau hasil None → pakai provinsi lama
+df["Provinsi"] = df["Provinsi_Extracted"].combine_first(df["Provinsi"])
 
 # =========================
 # SAVE
